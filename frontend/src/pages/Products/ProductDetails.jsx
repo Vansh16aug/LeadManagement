@@ -69,14 +69,14 @@ const ProductDetails = () => {
     const trackActivity = async () => {
       try {
         if (userInfo) {
-          const track = await axios.post(`${USERS_URL}/track-auth`, {
+          await axios.post(`${USERS_URL}/track-auth`, {
             userId: userInfo?._id,
             productId,
             isLoggedinUser: true,
             action: "viewed",
           });
         } else {
-          const track = await axios.post(`${USERS_URL}/track-regular`, {
+          await axios.post(`${USERS_URL}/track-regular`, {
             userId: null,
             productId,
             isLoggedinUser: false,

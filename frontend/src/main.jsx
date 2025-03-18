@@ -21,8 +21,6 @@ import CategoryList from "./pages/Admin/CategoryList";
 import ProductList from "./pages/Admin/ProductList";
 import AllProducts from "./pages/Admin/AllProducts";
 import ProductUpdate from "./pages/Admin/ProductUpdate";
-
-import Home from "./pages/Home.jsx";
 import Favorites from "./pages/Products/Favorites.jsx";
 import ProductDetails from "./pages/Products/ProductDetails.jsx";
 
