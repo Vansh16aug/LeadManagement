@@ -109,7 +109,6 @@ const getAbandonedCartUsers = async () => {
     },
   ]);
 
-  // console.log("Abandoned cart users:", abandonedCartUsers);
   return abandonedCartUsers;
 };
 
@@ -129,7 +128,7 @@ const getFrequentProductViewers = async () => {
     },
     {
       $match: {
-        viewCount: { $eq: 1 },
+        viewCount: { $gt: 3 }, // Users who viewed the product more than 3 times
       },
     },
     {
@@ -168,6 +167,49 @@ const getFrequentProductViewers = async () => {
   return frequentViewers;
 };
 
+// Fetch users who made a purchase
+const getPurchaseData = async () => {
+  const purchaseData = await UserActivityTracker.aggregate([
+    {
+      $match: {
+        action: "buy", // Match users who made a purchase
+      },
+    },
+    {
+      $lookup: {
+        from: "users", // The collection name for users
+        localField: "userId",
+        foreignField: "_id",
+        as: "userData",
+      },
+    },
+    {
+      $lookup: {
+        from: "products", // The collection name for products
+        localField: "productId",
+        foreignField: "_id",
+        as: "productData",
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        userId: 1,
+        productId: 1,
+        email: { $arrayElemAt: ["$userData.email", 0] },
+        username: { $arrayElemAt: ["$userData.username", 0] },
+        productName: { $arrayElemAt: ["$productData.name", 0] },
+        productImage: { $arrayElemAt: ["$productData.image", 0] },
+        productPrice: { $arrayElemAt: ["$productData.price", 0] },
+        productDescription: { $arrayElemAt: ["$productData.description", 0] },
+      },
+    },
+  ]);
+
+  console.log("Purchase data:", purchaseData);
+  return purchaseData;
+};
+
 // Send email to abandoned cart users
 const sendAbandonedCartEmail = async (user) => {
   try {
@@ -185,7 +227,7 @@ const sendAbandonedCartEmail = async (user) => {
       to: user.email,
       from: {
         name: "ECOMMERCE",
-        email: "kumarvansh16aug@gmail.com",
+        email: "namasteji96@gmail.com",
       },
       subject: "🛒 Don't Miss Out! Your Cart is Waiting - 10% OFF Inside!",
       text: `Hi ${user.username}, we noticed you left ${user.productName} in your cart. Complete your purchase now and get 10% off!`,
@@ -266,7 +308,7 @@ const sendFrequentViewerEmail = async (user) => {
       to: user.email,
       from: {
         name: "ECOMMERCE",
-        email: "kumarvansh16aug@gmail.com",
+        email: "namasteji96@gmail.com",
       },
       subject: "🌟 Special Offer Just for You!",
       text: `Hi ${user.username}, we noticed you're interested in ${user.productName}. Here's a special offer just for you!`,
@@ -332,6 +374,90 @@ const sendFrequentViewerEmail = async (user) => {
   }
 };
 
+// Send email to users who made a purchase
+const sendPurchaseConfirmationEmail = async (user) => {
+  try {
+    // Debug the user object to understand its structure
+    console.log(
+      "User data for purchase confirmation:",
+      JSON.stringify(user, null, 2)
+    );
+
+    const productImage =
+      user.productImage || "https://your-store.com/default-product-image.jpg";
+
+    // Fix: Use default value if productPrice is undefined
+    const productPrice = user.productPrice || 0;
+
+    const msg = {
+      to: user.email,
+      from: {
+        name: "ECOMMERCE",
+        email: "namasteji96@gmail.com",
+      },
+      subject: "🎉 Thank You for Your Purchase!",
+      text: `Hi ${user.username}, thank you for purchasing ${user.productName}. Here are the details of your order.`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            /* Add your email styles here */
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>THANK YOU FOR YOUR PURCHASE!</h1>
+            </div>
+            <div class="content">
+              <p class="greeting">Hi ${user.username || "there"},</p>
+              <p>Thank you for purchasing <strong>${
+                user.productName || "your product"
+              }</strong>. We're excited for you to enjoy your new product!</p>
+              <div class="product-card">
+                <img class="product-image" src="${productImage}" alt="${
+        user.productName || "Product"
+      }">
+                <div class="product-details">
+                  <h3 class="product-name">${
+                    user.productName || "Your Purchased Product"
+                  }</h3>
+                  <p class="product-description">${
+                    user.productDescription ||
+                    "This amazing product is perfect for your needs!"
+                  }</p>
+                  <div class="price-container">
+                    <span class="price">$${productPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              <p>If you have any questions about your order, feel free to contact us.</p>
+              <p>Happy shopping!</p>
+              <p>The ECOMMERCE Team</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    console.log("Sending purchase confirmation email to:", user.email);
+    await sgMail.send(msg);
+    console.log(
+      "Purchase confirmation email sent successfully to:",
+      user.email
+    );
+  } catch (error) {
+    console.error("Error sending purchase confirmation email:", error);
+    if (error.response) {
+      console.error("SendGrid error response:", error.response.body);
+    }
+  }
+};
+
 // Run abandoned cart recovery
 const runAbandonedCartRecovery = async () => {
   const abandonedCartUsers = await getAbandonedCartUsers();
@@ -350,14 +476,71 @@ const runFrequentViewerCampaign = async () => {
   }
 };
 
-// Schedule the automation
+// Trigger purchase confirmation email
+const triggerPurchaseConfirmationEmail = async () => {
+  try {
+    const purchaseData = await getPurchaseData();
+    console.log(`Found ${purchaseData.length} purchases to confirm`);
+
+    for (const user of purchaseData) {
+      await sendPurchaseConfirmationEmail(user);
+    }
+  } catch (error) {
+    console.error("Error in triggerPurchaseConfirmationEmail:", error);
+  }
+};
+
+// Schedule the automation for abandoned cart recovery
 cron.schedule("53 9 * * *", () => {
-  console.log("Cron job triggered at:", new Date().toLocaleString());
+  console.log(
+    "Abandoned cart recovery cron job triggered at:",
+    new Date().toLocaleString()
+  );
   runAbandonedCartRecovery();
 });
+
+// Schedule the automation for frequent viewer campaign
 cron.schedule("0 9 * * *", () => {
-  console.log("Cron job triggered at:", new Date().toLocaleString());
+  console.log(
+    "Frequent viewer campaign cron job triggered at:",
+    new Date().toLocaleString()
+  );
   runFrequentViewerCampaign();
+});
+
+// Schedule the automation for purchase confirmation emails
+cron.schedule("24 10 * * *", () => {
+  console.log(
+    "Purchase confirmation cron job triggered at:",
+    new Date().toLocaleString()
+  );
+  triggerPurchaseConfirmationEmail();
+});
+
+// Trigger purchase confirmation email on order creation
+app.post("/api/orders", async (req, res) => {
+  try {
+    const { userId, productId } = req.body;
+
+    // Create the order
+    const order = await Order.create({ userId, productId });
+
+    // Track the purchase action
+    await UserActivityTracker.create({
+      userId,
+      productId,
+      action: "buy",
+      purchases: 1,
+    });
+
+    // Trigger purchase confirmation email
+    await triggerPurchaseConfirmationEmail();
+
+    res.status(201).json(order);
+  } catch (error) {
+    console.error("Error creating order:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 app.listen(port, () => console.log(`Server running on port: ${port}`));
