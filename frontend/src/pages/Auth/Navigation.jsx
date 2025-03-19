@@ -116,6 +116,11 @@ const Navigation = () => {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/admin/analytics" className="block px-4 py-2">
+                    Analytics
+                  </Link>
+                </li>
+                <li>
                   <Link to="/admin/productlist" className="block px-4 py-2">
                     Products
                   </Link>

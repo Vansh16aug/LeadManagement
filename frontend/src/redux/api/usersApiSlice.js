@@ -1,6 +1,7 @@
 import { apiSlice } from "./apiSlice";
 import { USERS_URL } from "../constants";
 
+const newLocal = "PUT";
 export const userApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation({
@@ -52,10 +53,16 @@ export const userApiSlice = apiSlice.injectEndpoints({
     updateUser: builder.mutation({
       query: (data) => ({
         url: `${USERS_URL}/${data.userId}`,
-        method: "PUT",
+        method: newLocal,
         body: data,
       }),
       invalidatesTags: ["User"],
+    }),
+
+    getMyLeads: builder.query({
+      query: () => ({
+        url: `${USERS_URL}/leads`,
+      }),
     }),
   }),
 });
@@ -69,4 +76,5 @@ export const {
   useDeleteUserMutation,
   useUpdateUserMutation,
   useGetUserDetailsQuery,
+  useGetMyLeadsQuery,
 } = userApiSlice;

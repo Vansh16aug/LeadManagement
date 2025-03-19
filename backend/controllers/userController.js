@@ -23,6 +23,13 @@ const createUser = asyncHandler(async (req, res) => {
     await newUser.save();
     createToken(res, newUser._id);
 
+    // Track account creation
+    await UserActivity.create({
+      userId: newUser._id,
+      action: "account_created",
+      isLoggedinUser: true,
+    });
+
     res.status(201).json({
       _id: newUser._id,
       username: newUser.username,
@@ -170,38 +177,37 @@ const updateUserById = asyncHandler(async (req, res) => {
 });
 
 const storeUserActivity = asyncHandler(async (req, res) => {
-  let { userId, productId, isLoggedinUser } = req.body;
+  let { userId, productId, isLoggedinUser, action } = req.body;
+  const validActions = ["buy", "viewed", "added_to_cart", "account_created"];
+
+  if (!validActions.includes(action)) {
+    res.status(400);
+    throw new Error("Invalid action");
+  }
+
   if (!isLoggedinUser) {
     userId = uuidv4();
-    console.log("im not loggedin");
     return res.status(200).json({ userId });
   }
+
   try {
-    const userId = req?.body?.userId;
-    const action = req?.body?.action;
-    const validActions = ["clicked", "buy", "viewed"];
-    if (!validActions.includes(action)) {
-      res.status(400);
-      throw new Error("Invalid action");
-    }
     const existingActivity = await UserActivity.findOne({
       userId,
       productId,
       action,
     });
-    console.log(existingActivity);
+
     if (existingActivity) {
-      existingActivity.clicks =
-        action === "clicked" ? (existingActivity.clicks || 0) + 1 : 0;
       existingActivity.views =
         action === "viewed" ? (existingActivity.views || 0) + 1 : 0;
       existingActivity.purchases =
         action === "buy" ? (existingActivity.purchases || 0) + 1 : 0;
+      existingActivity.cartAdds =
+        action === "added_to_cart" ? (existingActivity.cartAdds || 0) + 1 : 0;
       existingActivity.timestamp = Date.now();
       await existingActivity.save();
       res.status(200).json(existingActivity);
     } else {
-      console.log(productId);
       const userActivity = new UserActivity({
         userId,
         productId,
@@ -210,14 +216,28 @@ const storeUserActivity = asyncHandler(async (req, res) => {
         clicks: action === "clicked" ? 1 : 0,
         views: action === "viewed" ? 1 : 0,
         purchases: action === "buy" ? 1 : 0,
+        cartAdds: action === "added_to_cart" ? 1 : 0,
       });
       await userActivity.save();
+      res.status(201).json({ message: "user activity stored" });
     }
-    return res.status(201).json({ message: "user activity stored" });
   } catch (error) {
     res.status(400);
     console.log(error);
     throw new Error("Invalid data");
+  }
+});
+
+const getLeadData = asyncHandler(async (req, res) => {
+  try {
+    const activities = await UserActivityTracker.find()
+      .populate("userId", "username email") // Populate userId with specific fields
+      .populate("productId", "name price category"); // Populate productId with specific fields
+
+    return res.status(200).json(activities);
+  } catch (error) {
+    console.log(error);
+    throw new Error("Invalid Data");
   }
 });
 
@@ -232,4 +252,5 @@ export {
   getUserById,
   updateUserById,
   storeUserActivity,
+  getLeadData,
 };

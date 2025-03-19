@@ -63,6 +63,14 @@ const ProductDetails = () => {
   const addToCartHandler = () => {
     dispatch(addToCart({ ...product, qty }));
     navigate("/cart");
+
+    // Track adding to cart
+    axios.post(`${USERS_URL}/track-auth`, {
+      userId: userInfo?._id,
+      productId,
+      isLoggedinUser: true,
+      action: "added_to_cart",
+    });
   };
 
   useEffect(() => {

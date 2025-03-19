@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+
 const userActivityTracker = new mongoose.Schema(
   {
     userId: {
@@ -9,7 +10,6 @@ const userActivityTracker = new mongoose.Schema(
     productId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Product",
-      required: true,
     },
     isLoggedinUser: {
       type: Boolean,
@@ -17,18 +17,18 @@ const userActivityTracker = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ["clicked", "buy", "viewed"],
+      enum: ["buy", "viewed", "added_to_cart", "account_created"],
       required: true,
-    },
-    clicks: {
-      type: Number,
-      default: 0,
     },
     views: {
       type: Number,
       default: 0,
     },
     purchases: {
+      type: Number,
+      default: 0,
+    },
+    cartAdds: {
       type: Number,
       default: 0,
     },

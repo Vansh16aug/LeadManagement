@@ -10,6 +10,7 @@ import {
   getUserById,
   updateUserById,
   storeUserActivity,
+  getLeadData,
 } from "../controllers/userController.js";
 
 import { authenticate, authorizeAdmin } from "../middlewares/authMiddleware.js";
@@ -38,5 +39,6 @@ router
 
 router.post("/track-auth", authenticate, storeUserActivity);
 router.post("/track-regular", storeUserActivity);
+// router.get("/leads", authenticate,authorizeAdmin, getLeadData);
 
 export default router;
